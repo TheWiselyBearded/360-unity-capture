@@ -1,0 +1,14 @@
+{
+  "name": "com.reza.unityvrcapture",
+  "version": "1.0.0",
+  "displayName": "360 Unity Capture",
+  "description": "360 unity capture to youtube",
+  "unity": "2022.3.31",
+  "dependencies": {},
+  "keywords": ["unity", "package"],
+  "author": {
+    "name": "Alireza Bahremand",
+    "email": "alireza.bahremand.dev@gmail.com",
+    "url": "https://alirezabahremand.com"
+  }
+}
