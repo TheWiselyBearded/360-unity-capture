@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "displayName": "360 Unity Capture",
   "description": "360 unity capture to youtube",
-  "unity": "2022.3.31",
-  "dependencies": {},
+  "unity": "2022.3",
+  "dependencies": {
+    "com.unity.recorder": "4.0.3"
+  },
   "keywords": ["unity", "package"],
   "author": {
     "name": "Alireza Bahremand",
