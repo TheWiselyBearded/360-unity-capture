@@ -1,0 +1,3 @@
+# Ignore YouTubeCredentials ScriptableObject assets
+/Editor/YoutubeCredentials/*.asset
+/Editor/YoutubeCredentials/*.meta
