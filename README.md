@@ -24,7 +24,7 @@ To install this package via Git, follow these steps:
 
 ## Setup
 1. Add YouTube API credentials:
-   - Place your OAuth 2.0 credentials in `YouTubeUploader.cs`
+   - Create your OAuth 2.0 credentials via Project View > Right Click > Youtube > Create credentials
    - Set redirect URI to `http://localhost:8080/`
 
 2. Add recorder to scene:
