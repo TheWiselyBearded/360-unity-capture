@@ -297,6 +297,8 @@ public class YouTubeUploadService {
     public YouTubeUploadService(string clientId, string clientSecret, Action<float, string> onProgress = null,
                               Action<string> onComplete = null,
                               Action<string> onError = null) {
+        CLIENT_ID = clientId;
+        CLIENT_SECRET = clientSecret;
         progressCallback = onProgress;
         completionCallback = onComplete;
         errorCallback = onError;
