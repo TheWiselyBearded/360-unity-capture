@@ -13,9 +13,18 @@ Record, process, and upload 360° videos directly from Unity to YouTube.
 - Python installation (standard Python or Anaconda)
 - Google Cloud project with YouTube API enabled
 
+## Installation
+
+### Using Git
+To install this package via Git, follow these steps:
+
+1. Open Unity and go to **Window > Package Manager**.
+2. Click the **+** button in the top-left corner and select **Add package from git URL.
+3. Paste the following URL and click **Add**: `https://github.com/TheWiselyBearded/360-unity-capture.git`
+
 ## Setup
 1. Add YouTube API credentials:
-   - Place your OAuth 2.0 credentials in `YouTubeUploader.cs`
+   - Create your OAuth 2.0 credentials via Project View > Right Click > Youtube > Create credentials
    - Set redirect URI to `http://localhost:8080/`
 
 2. Add recorder to scene:
