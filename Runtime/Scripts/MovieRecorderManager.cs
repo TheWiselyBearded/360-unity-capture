@@ -20,6 +20,11 @@ public class MovieRecorderManager : MonoBehaviour {
     private RecorderController m_RecorderController;
     public MovieRecorderSettings m_Settings;
 
+    public void Awake()
+    {
+        DontDestroyOnLoad(this);
+    }
+
     void Start() {
         if (AutoRecordOnPlay) {
             StartRecording();
