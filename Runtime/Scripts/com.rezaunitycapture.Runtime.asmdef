@@ -1,0 +1,18 @@
+{
+    "name": "com.rezaunitycapture.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:832a8ef6e615e9a41a5076e1c9a43782",
+        "GUID:847b179520b009e4c8d15c296b1cbf35",
+        "GUID:d87af21afaaf27f45b873a9ab462bcbb"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
