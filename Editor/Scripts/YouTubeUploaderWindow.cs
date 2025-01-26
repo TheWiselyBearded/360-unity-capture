@@ -44,22 +44,33 @@ public class YouTubeUploaderWindow : EditorWindow {
     }
 
     private void OnEnable() {
-        // Load existing credentials asset or prompt to create one
-        if (credentials == null)
-        {
-            string[] guids = AssetDatabase.FindAssets("t:YouTubeCredentials");
-            if (guids.Length > 0)
-            {
+        if (credentials == null) {
+            // Search in both package and project directories
+            string[] searchPaths = new[] {
+                "Packages",
+                "Assets",
+                "Packages/com.reza.vrcapture"  // Add your package name here
+            };
+
+            string[] guids = AssetDatabase.FindAssets("t:YouTubeCredentials", searchPaths);
+
+            if (guids.Length > 0) {
                 string path = AssetDatabase.GUIDToAssetPath(guids[0]);
                 credentials = AssetDatabase.LoadAssetAtPath<YouTubeCredentials>(path);
+                Debug.Log($"Found YouTube credentials at: {path}");
+            } else {
+                Debug.LogError("No YouTubeCredentials asset found. Create one via Assets > Create > YouTube > Credentials");
+                return;
             }
         }
 
-        serializedCredentials = new SerializedObject(this);
+        if (credentials != null) {
+            Debug.Log($"Using credentials - Client ID: {credentials.clientId}");
+            Debug.Log($"Redirect URI: {credentials.redirectUri}");
+        }
 
-        uploadService = new YouTubeUploadService(
-            credentials.clientId,
-            credentials.clientSecret,
+        serializedCredentials = new SerializedObject(this);
+        uploadService = new YouTubeUploadService(credentials.clientId, credentials.clientSecret, credentials.redirectUri,
             (progress, status) => {
                 uploadProgress = progress;
                 uploadStatus = status;
@@ -67,8 +78,7 @@ public class YouTubeUploaderWindow : EditorWindow {
             },
             (videoId) => {
                 isUploading = false;
-                EditorUtility.DisplayDialog("Upload Complete",
-                    $"Video uploaded successfully!\nVideo ID: {videoId}", "OK");
+                EditorUtility.DisplayDialog("Upload Complete", $"Video uploaded successfully!\nVideo ID: {videoId}", "OK");
                 Repaint();
             },
             (error) => {
@@ -294,11 +304,12 @@ public class YouTubeUploadService {
     private Action<string> completionCallback;
     private Action<string> errorCallback;
 
-    public YouTubeUploadService(string clientId, string clientSecret, Action<float, string> onProgress = null,
+    public YouTubeUploadService(string clientId, string clientSecret, string redirecturi, Action<float, string> onProgress = null,
                               Action<string> onComplete = null,
                               Action<string> onError = null) {
         CLIENT_ID = clientId;
         CLIENT_SECRET = clientSecret;
+        REDIRECT_URI = redirecturi;
         progressCallback = onProgress;
         completionCallback = onComplete;
         errorCallback = onError;
@@ -306,6 +317,16 @@ public class YouTubeUploadService {
     }
 
     private void InitializeFlow() {
+        // Validate credentials
+        if (string.IsNullOrEmpty(CLIENT_ID) || string.IsNullOrEmpty(CLIENT_SECRET)) {
+            Debug.LogError("YouTube credentials are not properly set. Please check your YouTubeCredentials asset.");
+            return;
+        }
+
+        Debug.Log($"Initializing OAuth flow with:");
+        Debug.Log($"Client ID: {CLIENT_ID}");
+        Debug.Log($"Redirect URI: {REDIRECT_URI}");
+
         flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer {
             ClientSecrets = new ClientSecrets { ClientId = CLIENT_ID, ClientSecret = CLIENT_SECRET },
             DataStore = new FileDataStore("YouTubeUploaderStore", true),
@@ -379,5 +400,47 @@ public class YouTubeUploadService {
             size = size / 1024;
         }
         return $"{size:0.##} {sizes[order]}";
+    }
+}
+
+
+public class LocalServerCodeReceiver : ICodeReceiver {
+    private readonly string redirectUri;
+
+    public LocalServerCodeReceiver(string uri) {
+        this.redirectUri = uri;
+        Debug.Log($"LocalServerCodeReceiver initialized with URI: {uri}");
+    }
+
+    public string RedirectUri => redirectUri;
+
+    public Task<AuthorizationCodeResponseUrl> ReceiveCodeAsync(AuthorizationCodeRequestUrl url, CancellationToken cancellationToken) {
+        Debug.Log($"Using redirect URI: {redirectUri}");
+        Debug.Log($"Opening auth URL: {url.Build()}");
+        Application.OpenURL(url.Build().ToString());
+
+        return Task.FromResult(new AuthorizationCodeResponseUrl {
+            Code = ReceiveAuthorizationCodeFromServer()
+        });
+    }
+
+    private string ReceiveAuthorizationCodeFromServer() {
+        using (var listener = new HttpListener()) {
+            listener.Prefixes.Add(redirectUri);
+            listener.Start();
+            Debug.Log($"Listening on {redirectUri}");
+
+            var context = listener.GetContext();
+            var response = context.Response;
+
+            var code = context.Request.QueryString["code"];
+            response.StatusCode = 200;
+            using (var writer = new StreamWriter(response.OutputStream)) {
+                writer.Write("Authentication successful! You can close this window.");
+            }
+
+            listener.Stop();
+            return code;
+        }
     }
 }

@@ -1,10 +1,9 @@
 using System;
 using System.IO;
-using UnityEditor;
+using UnityEngine;
 using UnityEditor.Presets;
 using UnityEditor.Recorder;
 using UnityEditor.Recorder.Input;
-using UnityEngine;
 using static UnityEngine.GraphicsBuffer;
 using Object = UnityEngine.Object;
 
@@ -58,26 +57,7 @@ public class MovieRecorderManager : MonoBehaviour {
         }
     }
 
-    public void LoadPreset(string presetName, Object target) {
-        // Define the path to the Presets directory
-        string presetsPath = "Assets/Presets";
-
-        // Construct the full path to the preset file
-        string presetFilePath = $"{presetsPath}/{presetName}.preset";
-
-        // Load the preset asset
-        Preset preset = AssetDatabase.LoadAssetAtPath<Preset>(presetFilePath);
-
-        // Apply the preset to the target object
-        if (preset != null && preset.CanBeAppliedTo(target)) {
-            preset.ApplyTo(target);
-            Debug.Log($"Preset '{presetName}' successfully applied to {target.name}.");
-        } else {
-            Debug.LogError($"Failed to apply preset '{presetName}'. Ensure it exists and is compatible with the target object.");
-        }
-    }
-
-    public void LoadRecorderSettings() {
+    public void LoadRecorderSettingsOld() {
         string presetPath = "Assets/Presets/";        
         // Load the appropriate preset
         RecorderControllerSettings controllerSettings = ScriptableObject.CreateInstance<RecorderControllerSettings>();
@@ -107,6 +87,49 @@ public class MovieRecorderManager : MonoBehaviour {
         // Save the ScriptableObject asset so that the path is retained
         //EditorUtility.SetDirty(recorderData);
         //AssetDatabase.SaveAssets();
+    }
+
+    private string GetPackagePresetPath() {
+        // Search in both package and project directories
+        string[] guids = AssetDatabase.FindAssets("t:Preset", new[] {
+            "Packages/com.reza.vrcapture/Presets",
+            "Assets/Presets"
+        });
+
+        foreach (string guid in guids) {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (Path.GetDirectoryName(path).Contains("Presets")) {
+                return Path.GetDirectoryName(path);
+            }
+        }
+
+        Debug.LogError("Presets directory not found in package or project");
+        return null;
+    }
+
+    public void LoadRecorderSettings() {
+        string presetPath = GetPackagePresetPath();
+        if (string.IsNullOrEmpty(presetPath)) return;
+
+        // Rest of the method remains the same
+        RecorderControllerSettings controllerSettings = ScriptableObject.CreateInstance<RecorderControllerSettings>();
+        m_RecorderController = new RecorderController(controllerSettings);
+        m_Settings = ScriptableObject.CreateInstance<MovieRecorderSettings>();
+
+        string presetName = SelectedRecorderType switch {
+            RecorderType.MovieRecorder => "MovieRecorderSettings",
+            RecorderType.MovieRecorder360 => "360MovieRecorderSettings",
+            RecorderType.MovieRecorder360Stereo => "360StereoMovieRecorderSettings",
+            _ => throw new ArgumentException("Invalid recorder type")
+        };
+
+        ApplyPreset(presetPath, presetName, m_Settings);
+        ConfigureMediaOutput();
+        controllerSettings.AddRecorderSettings(m_Settings);
+        controllerSettings.SetRecordModeToManual();
+        controllerSettings.FrameRate = 60.0f;
+
+        Debug.Log($"Loaded settings for {SelectedRecorderType} from {presetPath}");
     }
 
     private void ApplyPreset(string presetPath, string presetName, Object target) {

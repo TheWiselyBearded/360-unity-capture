@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Diagnostics;
 using System.IO;
 using Debug = UnityEngine.Debug;
+using System;
 
 public class PythonScriptExecutor {
     // Get the system-specific Python path
@@ -117,13 +118,41 @@ public class PythonScriptExecutor {
         return ExecutePythonScript(absoluteInputPath, absoluteOutputPath, "--stereo left-right");
     }
 
+    private static string GetPackagePythonPath() {
+        // Get the package path regardless of whether it's in Packages or Assets
+        string[] guids = UnityEditor.AssetDatabase.FindAssets("t:Script PythonScriptExecutor");
+        if (guids.Length == 0) {
+            Debug.LogError("Could not locate PythonScriptExecutor script in project");
+            return null;
+        }
+
+        string scriptPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+        string editorFolder = Path.GetDirectoryName(scriptPath);
+        return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.dataPath), Path.Combine(editorFolder, "../Python/spatial-media-2.1/inject_metadata_cli.py")));
+    }
+
+    private static string GetOutputPath(string originalPath) {
+        string fileName = Path.GetFileName(originalPath);
+        string downloadsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "Downloads"
+        );
+        return Path.Combine(downloadsPath, fileName);
+    }
+
     private static bool ExecutePythonScript(string inputPath, string outputPath, string arguments) {
         try {
             string pythonPath = GetPythonPath();
-            string scriptPath = GetAbsolutePath("Assets/Python/spatial-media-2.1/inject_metadata_cli.py");
+            string scriptPath = GetPackagePythonPath();
+            string finalOutputPath = GetOutputPath(outputPath);
+
+            if (scriptPath == null) {
+                Debug.LogError("Failed to locate Python script path");
+                return false;
+            }
 
             // Build the full shell command
-            string command = $"\"{pythonPath}\" \"{scriptPath}\" \"{inputPath}\" \"{outputPath}\" {arguments}";
+            string command = $"\"{pythonPath}\" \"{scriptPath}\" \"{inputPath}\" \"{finalOutputPath}\" {arguments}";
             Debug.Log($"Executing command: {command}");
 
             ProcessStartInfo startInfo = new ProcessStartInfo();
