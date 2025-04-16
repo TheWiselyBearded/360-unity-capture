@@ -1,13 +1,17 @@
 using UnityEngine;
 using UnityEditor;
+using System.IO;
 
 public class RecorderSetupWindow : EditorWindow
 {
+    private bool showMissingPresetsWarning = false;
+
     [MenuItem("Tools/Recorder Setup")]
     public static void ShowWindow()
     {
         var window = GetWindow<RecorderSetupWindow>("Recorder Setup");
         window.minSize = new Vector2(300, 200);
+        window.CheckPresetsFolder();
     }
 
     private void OnGUI()
@@ -16,8 +20,61 @@ public class RecorderSetupWindow : EditorWindow
         GUILayout.Label("Recorder Setup", EditorStyles.boldLabel);
         EditorGUILayout.Space(10);
 
+        if (showMissingPresetsWarning)
+        {
+            EditorGUILayout.HelpBox("Presets folder not found in Assets. Click below to copy it from the package.", MessageType.Warning);
+            if (GUILayout.Button("Copy Presets Folder"))
+            {
+                CopyPresetsFolder();
+                showMissingPresetsWarning = false;
+            }
+        }
+
         DrawButtons();
         DrawInfo();
+    }
+
+    private void CheckPresetsFolder()
+    {
+        string targetPath = Path.Combine(Application.dataPath, "Presets");
+        if (!Directory.Exists(targetPath))
+        {
+            showMissingPresetsWarning = true;
+        }
+    }
+
+    private void CopyPresetsFolder()
+    {
+        string[] results = AssetDatabase.FindAssets("RecorderSetupWindow t:Script");
+
+        foreach (var guid in results)
+        {
+            string scriptPath = AssetDatabase.GUIDToAssetPath(guid);
+            if (scriptPath.EndsWith("RecorderSetupWindow.cs"))
+            {
+                // Go up from: Packages/360 Unity Capture/Editor/Scripts
+                string scriptDir = Path.GetDirectoryName(scriptPath);
+                string packageRoot = Path.GetFullPath(Path.Combine(scriptDir, "../../"));  // up to 360 Unity Capture
+
+                string sourcePath = Path.Combine(packageRoot, "Presets");
+                string targetPath = Path.Combine(Application.dataPath, "Presets");
+
+                if (Directory.Exists(sourcePath))
+                {
+                    FileUtil.CopyFileOrDirectory(sourcePath, targetPath);
+                    AssetDatabase.Refresh();
+                    Debug.Log("Presets folder copied successfully to Assets.");
+                }
+                else
+                {
+                    Debug.LogError($"Could not find source Presets folder at: {sourcePath}");
+                }
+
+                return;
+            }
+        }
+
+        Debug.LogError("Could not locate RecorderSetupWindow.cs in AssetDatabase.");
     }
 
     private void DrawButtons()
@@ -53,7 +110,6 @@ public class RecorderSetupWindow : EditorWindow
 
     private void CreateRecorder(string objectName, MovieRecorderManager.RecorderType type)
     {
-        // Check if a recorder already exists in the scene
         var existingRecorder = FindObjectOfType<MovieRecorderManager>();
         if (existingRecorder != null)
         {
@@ -63,20 +119,13 @@ public class RecorderSetupWindow : EditorWindow
             if (!proceed) return;
         }
 
-        // Create a new empty GameObject
         GameObject recorderObject = new GameObject(objectName);
-
-        // Add the MovieRecorderManager component
         var manager = recorderObject.AddComponent<MovieRecorderManager>();
         manager.SelectedRecorderType = type;
         manager.AutoRecordOnPlay = false;
 
-
-        // Set the new GameObject as the active selection in the Editor
         Selection.activeGameObject = recorderObject;
         SceneView.lastActiveSceneView?.FrameSelected();
-
-        // Register the Undo operation
         Undo.RegisterCreatedObjectUndo(recorderObject, $"Create {objectName}");
     }
 }
